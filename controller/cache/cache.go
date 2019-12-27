@@ -127,7 +127,7 @@ func (c *liveStateCache) getCluster(server string) (*clusterInfo, error) {
 		}
 		info = &clusterInfo{
 			apisMeta:         make(map[schema.GroupKind]*apiMeta),
-			lock:             &sync.Mutex{},
+			lock:             &sync.RWMutex{},
 			nodes:            make(map[kube.ResourceKey]*node),
 			nsIndex:          make(map[string]map[kube.ResourceKey]*node),
 			onObjectUpdated:  c.onObjectUpdated,

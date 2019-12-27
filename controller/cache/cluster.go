@@ -46,7 +46,7 @@ type clusterInfo struct {
 	apisMeta      map[schema.GroupKind]*apiMeta
 	serverVersion string
 
-	lock    *sync.Mutex
+	lock    *sync.RWMutex
 	nodes   map[kube.ResourceKey]*node
 	nsIndex map[string]map[kube.ResourceKey]*node
 
@@ -228,7 +228,7 @@ func (c *clusterInfo) startMissingWatches() error {
 	return nil
 }
 
-func runSynced(lock *sync.Mutex, action func() error) error {
+func runSynced(lock *sync.RWMutex, action func() error) error {
 	lock.Lock()
 	defer lock.Unlock()
 	return action()
@@ -385,6 +385,14 @@ func (c *clusterInfo) sync() (err error) {
 }
 
 func (c *clusterInfo) ensureSynced() error {
+	c.lock.RLock()
+	if c.synced() {
+		defer c.lock.RUnlock()
+		return c.syncError
+	} else {
+		c.lock.RUnlock()
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.synced() {
@@ -399,8 +407,8 @@ func (c *clusterInfo) ensureSynced() error {
 }
 
 func (c *clusterInfo) getNamespaceTopLevelResources(namespace string) map[kube.ResourceKey]appv1.ResourceNode {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	nodes := make(map[kube.ResourceKey]appv1.ResourceNode)
 	for _, node := range c.nsIndex[namespace] {
 		if len(node.ownerRefs) == 0 {
@@ -411,8 +419,8 @@ func (c *clusterInfo) getNamespaceTopLevelResources(namespace string) map[kube.R
 }
 
 func (c *clusterInfo) iterateHierarchy(key kube.ResourceKey, action func(child appv1.ResourceNode, appName string)) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	if objInfo, ok := c.nodes[key]; ok {
 		nsNodes := c.nsIndex[key.Namespace]
 		action(objInfo.asResourceNode(), objInfo.getApp(nsNodes))
@@ -448,8 +456,8 @@ func (c *clusterInfo) isNamespaced(gk schema.GroupKind) bool {
 }
 
 func (c *clusterInfo) getManagedLiveObjs(a *appv1.Application, targetObjs []*unstructured.Unstructured, metricsServer *metrics.MetricsServer) (map[kube.ResourceKey]*unstructured.Unstructured, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	managedObjs := make(map[kube.ResourceKey]*unstructured.Unstructured)
 	// iterate all objects in live state cache to find ones associated with app
@@ -580,8 +588,8 @@ var (
 )
 
 func (c *clusterInfo) getClusterInfo() metrics.ClusterInfo {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return metrics.ClusterInfo{
 		APIsCount:         len(c.apisMeta),
 		K8SVersion:        c.serverVersion,
