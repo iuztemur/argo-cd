@@ -588,8 +588,6 @@ var (
 )
 
 func (c *clusterInfo) getClusterInfo() metrics.ClusterInfo {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 	return metrics.ClusterInfo{
 		APIsCount:         len(c.apisMeta),
 		K8SVersion:        c.serverVersion,

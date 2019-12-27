@@ -292,8 +292,6 @@ func (c *liveStateCache) Run(ctx context.Context) error {
 }
 
 func (c *liveStateCache) GetClustersInfo() []metrics.ClusterInfo {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 	res := make([]metrics.ClusterInfo, 0)
 	for _, info := range c.clusters {
 		res = append(res, info.getClusterInfo())
