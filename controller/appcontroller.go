@@ -147,7 +147,7 @@ func NewApplicationController(
 		return err
 	})
 	stateCache := statecache.NewLiveStateCache(db, appInformer, ctrl.settingsMgr, kubectl, ctrl.metricsServer, ctrl.handleObjectUpdated)
-	// ctrl.metricsServer.RegisterClustersInfoSource(stateCache)
+	ctrl.metricsServer.RegisterClustersInfoSource(stateCache)
 	appStateManager := NewAppStateManager(db, applicationClientset, repoClientset, namespace, kubectl, ctrl.settingsMgr, stateCache, projInformer, ctrl.metricsServer)
 	ctrl.appInformer = appInformer
 	ctrl.appLister = appLister
